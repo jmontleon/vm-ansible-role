@@ -1,0 +1,14 @@
+vm_name: "cow_{{ lookup('community.general.random_string', length=8, special=false, numbers=false, upper=false) }}"
+cpus: 16
+disk: 128
+disk_unit: G
+memory: 16
+memory_unit: GiB
+distribution: fedora
+libvirt_uri: qemu:///session
+fedora_mac_prefix: "52:54:00"
+centos_mac_prefix: "52:54:01" 
+rhel_mac_prefix: "52:54:02"
+start_vm: true
+disk_path: "{{ lookup('env','HOME') }}/.local/share/libvirt/images/{{ stable_vm_name }}.qcow2"
+ovmf_vars_path: "{{ lookup('env','HOME') }}/.config/libvirt/qemu/nvram/{{ stable_vm_name }}_VARS.fd"

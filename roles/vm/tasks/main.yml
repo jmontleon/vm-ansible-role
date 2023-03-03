@@ -1,0 +1,48 @@
+- name: Set VM name
+  set_fact:
+    stable_vm_name: "{{ vm_name }}"
+
+- name: Create Disk
+  shell: "qemu-img create -f qcow2 -o preallocation=falloc {{ disk_path }} {{ disk }}{{ disk_unit }}"
+
+- name: Create UEFI Vars File
+  ansible.builtin.copy:
+    src: /usr/share/edk2/ovmf/OVMF_VARS.secboot.fd
+    dest: "{{ ovmf_vars_path }}"
+
+- name: Generate Random Mac Address for Fedora
+  shell: python -c "import random; print(\"{{ fedora_mac_prefix }}:%02x:%02x:%02x\" % 
+           (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))"
+  register: mac1
+  when: 
+  - distribution != "centos"
+  - distribution != "rhel"
+
+- name: Generate Random Mac Address for CentOS
+  shell: python -c "import random; print(\"{{ centos_mac_prefix }}:%02x:%02x:%02x\" % 
+           (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))"
+  register: mac2
+  when: distribution == "centos"
+
+- name: Generate Random Mac Address for RHEL
+  shell: python -c "import random; print(\"{{ rhel_mac_prefix }}:%02x:%02x:%02x\" % 
+           (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))"
+  register: mac3
+  when: distribution == "rhel"
+
+- name: Set Mac Address Fact
+  set_fact:
+    mac: "{% if distribution=='centos' %}{{ mac2.stdout }}{% elif distribution=='rhel'%}{{ mac3.stdout }}{% else %}{{ mac1.stdout }}{% endif %}"
+
+- name: Render VM Template
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('template', 'linux.xml.j2') }}"
+    uri: "{{ libvirt_uri }}"
+
+- name: Start VM
+  community.libvirt.virt:
+    name: "{{ stable_vm_name }}"
+    state: running
+    uri: "{{ libvirt_uri }}"
+  when: start_vm
